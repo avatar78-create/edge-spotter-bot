@@ -11,7 +11,7 @@ CHAT_ID = os.getenv("CHAT_ID")
 @app.route('/webhook', methods=['POST'])
 def webhook():
     # Obtenemos los datos inmediatamente
-    data = request.get_json()
+    data = request.get_json(force=True)
     
     if data:
         # Formato de mensaje para el canal
