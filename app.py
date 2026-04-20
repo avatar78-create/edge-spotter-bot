@@ -1,63 +1,37 @@
+from fastapi import FastAPI, Header, HTTPException
+from pydantic import BaseModel
+import requests  # <-- Agregamos esta que es la que te pide el error
 import os
-import requests
-from flask import Flask, request
-from datetime import datetime
-import pytz
 
-app = Flask(__name__)
+app = FastAPI()
 
-# Configuración de Telegram (Cargada desde variables de entorno de Render)
-TOKEN = os.environ.get('TELEGRAM_TOKEN')
-CHAT_ID = os.environ.get('TELEGRAM_CHAT_ID')
-url = f"https://api.telegram.org/bot{TOKEN}/sendMessage"
+TELEGRAM_TOKEN = os.getenv("TELEGRAM_TOKEN")
+TELEGRAM_CHAT_ID = os.getenv("TELEGRAM_CHAT_ID")
+SECRET_TOKEN = os.getenv("SECRET_TOKEN")
 
-@app.route('/webhook', methods=['POST'])
-def webhook():
-    # force=True asegura que procese el JSON aunque el header sea distinto
-    data = request.get_json(force=True)
-    
-    if data:
-        # 1. Lógica de Bias (Sentido de la operación)
-        status = data.get('status', '').upper()
-        if "BUY" in status or "COMPRA" in status:
-            bias_header = "🟢 ORDEN DE COMPRA"
-        elif "SELL" in status or "VENTA" in status:
-            bias_header = "🔴 ORDEN DE VENTA"
-        else:
-            bias_header = f"🔵 ALERTA: {status}"
+class Signal(BaseModel):
+    bot: str
+    ticker: str
+    action: str
+    signal_type: str
+    mode: str
+    price: float
+    rsi: float
+    bar_time: int
 
-        # 2. Gestión de la Hora (Zona Horaria Argentina UTC-3)
-        try:
-            arg_tz = pytz.timezone('America/Argentina/Buenos_Aires')
-            dt_arg = datetime.now(arg_tz)
-            hora_local = dt_arg.strftime("%H:%M:%S")
-        except Exception:
-            hora_local = data.get('time', 'N/A')
+@app.post("/webhook")
+async def handle_webhook(signal: Signal, x_tv_token: str = Header(None)):
+    if x_tv_token != SECRET_TOKEN:
+        raise HTTPException(status_code=403, detail="No autorizado")
 
-        # 3. Construcción del Mensaje Estético
-        mensaje = (
-            f"**{bias_header}**\n"
-            f"━━━━━━━━━━━━━━━\n"
-            f"📈 **Activo:** {data.get('ticker')}\n"
-            f"🏷️ **Precio:** {data.get('price')}\n"
-            f"⏰ **Hora:** {hora_local} (Arg)"
-        )
+    emoji = "🟢" if signal.action == "BUY" else "🔴"
+    text = (f"{emoji} *SEÑAL {signal.bot}*\n"
+            f"Instrumento: {signal.ticker}\n"
+            f"Tipo: {signal.signal_type}\n"
+            f"Precio: {signal.price}")
 
-        # 4. Envío a Telegram
-        payload = {
-            "chat_id": CHAT_ID,
-            "text": mensaje,
-            "parse_mode": "Markdown"
-        }
-        
-        try:
-            requests.post(url, json=payload, timeout=5)
-        except requests.exceptions.RequestException as e:
-            print(f"Error enviando a Telegram: {e}")
+    # Usamos requests para enviar el mensaje
+    url = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage"
+    requests.post(url, json={"chat_id": TELEGRAM_CHAT_ID, "text": text, "parse_mode": "Markdown"})
 
-    return "OK", 200
-
-if __name__ == '__main__':
-    # Render usa la variable PORT, por defecto 5000
-    port = int(os.environ.get("PORT", 5000))
-    app.run(host='0.0.0.0', port=port)
+    return {"status": "ok"}
