@@ -78,38 +78,3 @@ async def handle_webhook(signal: Signal):
         print(f"[LOG Canal] Status {resp_canal.status_code} — {resp_canal.text}")
 
     return {"status": "ok", "telegram_status": resp_personal.status_code}
-
-
-# ╔══════════════════════════════════════════════════════════════╗
-# ║  BLOQUE DE PRUEBA — BORRAR ANTES DE PRODUCCIÓN FINAL        ║
-# ║  Endpoint: GET /test                                        ║
-# ║  Simula una señal LONG real y la manda a Telegram           ║
-# ║  Uso: abrí https://TU-APP.onrender.com/test en el browser   ║
-# ╚══════════════════════════════════════════════════════════════╝
-@app.get("/test")
-async def test_webhook():
-
-    # Payload de prueba — replica exactamente lo que manda TradingView
-    fake_signal = Signal(
-        bot         = "Edge Spotter v7.2",
-        ticker      = "XAUUSD",
-        action      = "BUY",
-        signal_type = "LONG",
-        mode        = "Confirmado",
-        price       = 4703.265,
-        rsi         = 45.23,
-        bar_time    = 1745000000,
-        secret      = SECRET_TOKEN  # usa el mismo secret de Render
-    )
-
-    # Reutiliza la lógica del webhook real
-    result = await handle_webhook(fake_signal)
-
-    return {
-        "test": "completado",
-        "payload_enviado": fake_signal.dict(),
-        "resultado": result
-    }
-# ╔══════════════════════════════════════════════════════════════╗
-# ║  FIN BLOQUE DE PRUEBA                                       ║
-# ╚══════════════════════════════════════════════════════════════╝
