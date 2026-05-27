@@ -67,21 +67,21 @@ class Signal(BaseModel):
 # ============================================================
 def checkmark(val: Optional[bool]) -> str:
     if val is True:
-        return "✅"
+        return "V"
     if val is False:
-        return "❌"
-    return "—"
+        return "X"
+    return "-"
 
 def regime_emoji(regime: Optional[str]) -> str:
-    if regime == "BULL":    return "🐂"
-    if regime == "BEAR":    return "🐻"
-    if regime == "VOLATIL": return "⚡"
-    return "〰️"   # NORMAL
+    if regime == "BULL":    return "BULL"
+    if regime == "BEAR":    return "BEAR"
+    if regime == "VOLATIL": return "VOLATIL"
+    return "NORMAL"
 
 def efi_emoji(efi_dir: Optional[str]) -> str:
-    if efi_dir == "BULLISH": return "🟢"
-    if efi_dir == "BEARISH": return "🔴"
-    return "⚪"
+    if efi_dir == "BULLISH": return "[+]"
+    if efi_dir == "BEARISH": return "[-]"
+    return "[~]"
 
 # ============================================================
 # HEALTHCHECK
@@ -105,22 +105,16 @@ async def handle_webhook(signal: Signal):
 
     # --- Emoji y etiqueta por tipo de senal ---
     if signal.signal_type == "PANIC_BUY":
-        emoji   = "⚡🟢"
         s_label = "PANIC BUY"
     elif signal.signal_type == "PANIC_SELL":
-        emoji   = "⚡🔴"
         s_label = "PANIC SELL"
     elif signal.signal_type == "LUNA_LONG":
-        emoji   = "🌙🟢"
         s_label = "LUNA LONG"
     elif signal.signal_type == "LUNA_SHORT":
-        emoji   = "🌙🔴"
         s_label = "LUNA SHORT"
     elif signal.action == "BUY":
-        emoji   = "🟢"
         s_label = "LONG"
     else:
-        emoji   = "🔴"
         s_label = "SHORT"
 
     # --- Modo ---
@@ -129,98 +123,83 @@ async def handle_webhook(signal: Signal):
     # --- Nombre del instrumento ---
     instrument_name = signal.instrument if signal.instrument else signal.ticker
 
-    # ============================================================
-    # BLOQUE DE PRECIO
-    # ============================================================
+    # --- Precio ---
     price_line = ""
     if signal.price is not None:
-        price_line = f"💰 Price:     `{signal.price}`\n"
+        price_line = f"Price:    {signal.price}\n"
 
-    # ============================================================
-    # BLOQUE TP / SL / R:R
-    # ============================================================
+    # --- TP / SL / RR ---
     if is_luna:
-        # Luna envia tp1/tp2 y rr1/rr2 calculados
         tp_block = ""
         if signal.tp1 is not None:
-            tp_block += f"✅ TP1:       `{signal.tp1}`\n"
+            tp_block += f"TP1:      {signal.tp1}\n"
         if signal.tp2 is not None:
-            tp_block += f"✅ TP2:       `{signal.tp2}`\n"
-        tp_block += f"🛑 SL:        `{signal.sl}`\n"
+            tp_block += f"TP2:      {signal.tp2}\n"
+        tp_block += f"SL:       {signal.sl}\n"
         if signal.rr1 is not None:
-            tp_block += f"📐 R:R 1:     `{signal.rr1}:1`\n"
+            tp_block += f"RR1:      {signal.rr1}:1\n"
         if signal.rr2 is not None:
-            tp_block += f"📐 R:R 2:     `{signal.rr2}:1`\n"
+            tp_block += f"RR2:      {signal.rr2}:1\n"
     else:
-        # E-Spotter core: calcula rr en el webhook
         sl_pips = round(abs(signal.entry - signal.sl), 5)
         tp_pips = round(abs(signal.tp - signal.entry), 5) if signal.tp else 0
         rr      = round(tp_pips / sl_pips, 2) if sl_pips > 0 else 0
         tp_block = (
-            f"✅ TP:        `{signal.tp}`\n"
-            f"🛑 SL:        `{signal.sl}`\n"
-            f"📐 R:R:       `{rr}:1`\n"
+            f"TP:       {signal.tp}\n"
+            f"SL:       {signal.sl}\n"
+            f"RR:       {rr}:1\n"
         )
 
-    # ============================================================
-    # BLOQUE DE REGIMEN / FILTROS
-    # ============================================================
+    # --- Regime / Filtros ---
     regime_line = ""
     if signal.regime is not None:
-        r_emoji = regime_emoji(signal.regime)
-        regime_line = f"Regime:    {r_emoji} `{signal.regime}`\n"
+        regime_line = f"Regime:   {regime_emoji(signal.regime)}\n"
 
     htf_line = ""
     if signal.htf_bias is not None:
         long_ck  = checkmark(signal.htf_long)
         short_ck = checkmark(signal.htf_short)
-        htf_line = f"HTF 15M:   `{signal.htf_bias}`  L{long_ck} S{short_ck}\n"
+        htf_line = f"HTF 15M:  {signal.htf_bias}  L:{long_ck} S:{short_ck}\n"
 
     efi_line = ""
     if signal.efi_val is not None and signal.efi_dir is not None:
-        e_emoji = efi_emoji(signal.efi_dir)
-        efi_line = f"EFI:       {e_emoji} `{signal.efi_val}` ({signal.efi_dir})\n"
+        efi_line = f"EFI:      {efi_emoji(signal.efi_dir)} {signal.efi_val} ({signal.efi_dir})\n"
 
     er_line = ""
     if signal.er is not None:
-        er_line = f"ER:        `{signal.er}`\n"
+        er_line = f"ER:       {signal.er}\n"
 
     atr_line = ""
     if signal.atr_ratio is not None:
-        atr_line = f"ATR Ratio: `{signal.atr_ratio}x`\n"
+        atr_line = f"ATR Ratio:{signal.atr_ratio}x\n"
 
     rsi_line = ""
     if signal.rsi is not None:
-        rsi_line = f"RSI:       `{signal.rsi}`\n"
+        rsi_line = f"RSI:      {signal.rsi}\n"
 
-    # ============================================================
-    # CABECERA DE MODULO
-    # ============================================================
     module_header = ""
     if is_luna:
-        module_header = f"┌ _{signal.module}_\n"
+        module_header = f"[ {signal.module} ]\n"
 
-    # ============================================================
-    # MENSAJE FINAL
-    # ============================================================
+    # --- Mensaje final (sin Markdown) ---
     text = (
-        f"{emoji} *{s_label} — {instrument_name}*\n"
+        f"{s_label} - {instrument_name}\n"
         f"{module_header}"
-        f"━━━━━━━━━━━━━━━\n"
+        f"---------------\n"
         f"{price_line}"
-        f"🎯 Entry:     `{signal.entry}`\n"
+        f"Entry:    {signal.entry}\n"
         f"{tp_block}"
-        f"━━━━━━━━━━━━━━━\n"
-        f"Mode:      {mode_display}\n"
+        f"---------------\n"
+        f"Mode:     {mode_display}\n"
         f"{regime_line}"
         f"{htf_line}"
         f"{efi_line}"
         f"{rsi_line}"
         f"{er_line}"
         f"{atr_line}"
-        f"━━━━━━━━━━━━━━━\n"
-        f"_A signal is not an order — it's an opportunity to validate\\._\n"
-        f"— *E\\-Spotter | AIMFXTOOLS* —"
+        f"---------------\n"
+        f"A signal is not an order - it's an opportunity to validate.\n"
+        f"-- E-Spotter | AIMFXTOOLS --"
     )
 
     url = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage"
@@ -228,16 +207,16 @@ async def handle_webhook(signal: Signal):
     # --- Envio a chat personal ---
     resp_personal = requests.post(
         url,
-        json={"chat_id": TELEGRAM_CHAT_ID, "text": text, "parse_mode": "Markdown"}
+        json={"chat_id": TELEGRAM_CHAT_ID, "text": text}
     )
-   print(f"[LOG Personal] Status {resp_personal.status_code} — {resp_personal.text}")
+    print(f"[LOG Personal] Status {resp_personal.status_code} - {resp_personal.text}")
 
     # --- Envio al canal ---
     if CHANNEL_ID:
         resp_canal = requests.post(
             url,
-            json={"chat_id": CHANNEL_ID, "text": text, "parse_mode": "Markdown"}
+            json={"chat_id": CHANNEL_ID, "text": text}
         )
-        print(f"[LOG Canal] Status {resp_canal.status_code} — {resp_canal.text}")
+        print(f"[LOG Canal] Status {resp_canal.status_code} - {resp_canal.text}")
 
     return {"status": "ok", "signal_type": signal.signal_type, "module": signal.module, "telegram_status": resp_personal.status_code}
