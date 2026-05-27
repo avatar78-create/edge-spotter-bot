@@ -199,10 +199,9 @@ scheduler.start()
 async def root():
     return {"status": "E-Spotter AIMFX Webhook — Active", "version": "7.3.2"}
 
-@app.get("/health")
+@app.api_route("/health", methods=["GET", "HEAD"])
 async def health():
     return {"status": "ok"}
-
 # ============================================================
 # ENDPOINT MANUAL (para testear el informe sin esperar las 9am)
 # ============================================================
