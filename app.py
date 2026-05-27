@@ -228,7 +228,7 @@ async def handle_webhook(signal: Signal):
     # --- Envio a chat personal ---
     resp_personal = requests.post(
         url,
-        json={"chat_id": TELEGRAM_CHAT_ID, "text": text, "parse_mode": "MarkdownV2"}
+        json={"chat_id": TELEGRAM_CHAT_ID, "text": text, "parse_mode": "Markdown"}
     )
     print(f"[LOG Personal] Status {resp_personal.status_code} — {resp_personal.text}")
 
@@ -236,7 +236,7 @@ async def handle_webhook(signal: Signal):
     if CHANNEL_ID:
         resp_canal = requests.post(
             url,
-            json={"chat_id": CHANNEL_ID, "text": text, "parse_mode": "MarkdownV2"}
+            json={"chat_id": CHANNEL_ID, "text": text, "parse_mode": "Markdown"}
         )
         print(f"[LOG Canal] Status {resp_canal.status_code} — {resp_canal.text}")
 
